@@ -1,4 +1,5 @@
 import hashlib
+from eth_account import Account
 
 def hashed(text):
     hs_lst = ["ah","rh","fu","cj","de","dc","aa","qe","cc","lp"]
@@ -28,3 +29,8 @@ def hashed(text):
     chuoi = hashlib.sha256(chuoi.encode('utf-8')).hexdigest()
 
     return chuoi
+
+def create_wallet():
+    wallet = Account.create('KEYSMASH FJAFJKLDSKF7JKFDJ 1530')
+    return wallet
+
