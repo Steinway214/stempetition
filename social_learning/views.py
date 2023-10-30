@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404, get_list_or_40
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.template import loader
 from .models import *
-from .hashed import hashed
+from .hashed import hashed, create_wallet
 from django.views import generic
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -56,6 +56,7 @@ def Signup(request):
         description = request.POST.get("description")
         avatar = request.FILES['avatar']
         thumbnail = request.FILES['thumbnail']
+        passcode = request.POST.get("passcode")
 
         user = User.objects.filter(username=username).first()
         user2 = Bio.objects.filter(user=user).first()
@@ -65,8 +66,9 @@ def Signup(request):
             user.save()
             user = User.objects.get(username=username)
             if user:
+                wallet = create_wallet()
                 user2 = Bio(user=user, avatar=avatar, thumbnail=thumbnail, grade=grade,edu_rank=education_rank,
-                               email=email, description=description)
+                               email=email, description=description, address=wallet, address_password=wallet.privateKey.hex(), wallet_passcode = wallet)
                 user2.save()
                 login(request, user)
                 return redirect("home")
@@ -78,6 +80,51 @@ def Signup(request):
 #index
 def index(request):
     return render("index.html")
+
+#searched_list_view
+def searched_question_list_view(request,q):
+    if request.user.is_authenticated:
+        user = Bio.objects.get(user=request.user)
+        post = Question.objects.filter(Q(title__icontain=q) | Q(description__icontain=q),grade__lte=user.grade).all()
+        context = {"posts":post[::-1]}
+    else:
+        return redirect("a_login")
+    return render(request,"question/list.html",context)
+
+def searched_gigs_list_view(request,q):
+    if request.user.is_authenticated:
+        user = Bio.objects.get(user=request.user)
+        post = Gigs.objects.filter(Q(title__icontain=q) | Q(description__icontain=q),grade__lte=user.grade, education_rank=user.edu_rank).all()
+        context = {"posts":post[::-1]}
+    else:
+        return redirect("a_login")
+    return render(request,"gigs/list.html",context)
+
+def searched_document_list_view(request,q):
+    if request.user.is_authenticated:
+        user = Bio.objects.get(user=request.user)
+        post = Document.objects.filter(Q(title__icontain=q) | Q(description__icontain=q),grade__lte=user.grade, edu_rank=user.edu_rank).all()
+        context = {"posts":post[::-1]}
+    else:
+        return redirect("a_login")
+    return render(request,"document/list.html",context)
+
+def searched_post_list_view(request,q):
+    if request.user.is_authenticated:
+        post = Post.objects.filter(Q(content__icontain=q)).all()
+        context = {"posts":post[::-1]}
+    else:
+        return redirect("a_login")
+    return render(request,"document/list.html",context)
+
+
+def searched_trade_list_view(request,q):
+    if request.user.is_authenticated:
+        post = Trade.objects.filter(Q(title__icontain=q) | Q(description__icontain=q)).all()
+        context = {"posts":post[::-1]}
+    else:
+        return redirect("a_login")
+    return render(request,"trade/list_view.html",context)
 
 #list_view
 def question_list_view(request):
@@ -116,13 +163,21 @@ def post_list_view(request):
     return render(request,"document/list.html",context)
 
 
+def trade_list_view(request):
+    if request.user.is_authenticated:
+        post = Trade.objects.all()
+        context = {"posts":post[::-1]}
+    else:
+        return redirect("a_login")
+    return render(request,"trade/list_view.html",context)
+
 #create_api
 def post_create(request):
     if request.user.is_authenticated:
         user = Bio.objects.get(user=request.user)
         if request.method == "POST":
             content = request.POST.get("content")
-            sql = Post(content=content,like=0,dislike=0,user=user)
+            sql = Post(content=content,user=user)
             sql.save()
             return redirect("post_view")
     else:
@@ -139,7 +194,7 @@ def document_create(request):
             grade = request.POST.get("grade")
             edu_rank = request.POST.get("education_rank")
 
-            sql = Document(title=title,description=description,file=file,image=image,grade=grade,edu_rank=edu_rank,like=0,dislike=0,user=user)
+            sql = Document(title=title,description=description,file=file,image=image,grade=grade,edu_rank=edu_rank,user=user)
             sql.save()
             return redirect("document_view")
     else:
@@ -160,7 +215,7 @@ def gigs_create(request):
             subject = request.POST.get("subject")
             price = request.POST.get("price")
 
-            sql = Gigs(title=title,result=result,price=price,subject=subject,description=description,book=book,type_learn=type_learn,image=image,grade=grade,edu_rank=edu_rank,like=0,dislike=0,user=user)
+            sql = Gigs(title=title,result=result,price=price,subject=subject,description=description,book=book,type_learn=type_learn,image=image,grade=grade,edu_rank=edu_rank,user=user)
             sql.save()
             return redirect("gigs_view")
     else:
@@ -180,15 +235,45 @@ def question_create(request):
             price = request.POST.get("price")
 
             if price >= 1:
-                sql = Question(title=title,description=description,price=price,file=file,subject=subject,image=image,grade=grade,education_rank=edu_rank,like=0,dislike=0,user=user)
+                sql = Question(title=title,description=description,price=price,file=file,subject=subject,image=image,grade=grade,education_rank=edu_rank,user=user)
                 sql.save()
                 return redirect("gigs_view")
             else:
-                sql = Question(title=title,description=description,price=1,file=file,subject=subject,image=image,grade=grade,education_rank=edu_rank,like=0,dislike=0,user=user)
+                sql = Question(title=title,description=description,price=1,file=file,subject=subject,image=image,grade=grade,education_rank=edu_rank,user=user)
                 sql.save()
                 return redirect("gigs_view")
     else:
         return redirect("a_login")
+    
+def create_trade_offer(request):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio and request.method == "POST":
+            change_value = request.POST.get("change_value")
+            change_currency = request.POST.get("change_currency")
+            changed_currency = request.POST.get("changed_currency")
+
+            if change_currency and change_value and changed_currency:
+                if changed_currency == "ETH":
+                    changed_value = 0.00022 * change_value
+                    sql = Trade(changed_value=change_value,changed_value=changed_value,change_currency=change_currency,changed_currency=changed_currency,payment_method=changed_currency,done="Còn hạn")
+                    sql.save()
+                    sql = Trade.objects.filter(changed_value=change_value,changed_value=changed_value,change_currency=change_currency,changed_currency=changed_currency,payment_method=changed_currency,done="Còn hạn",user=bio).first()
+                    return redirect("read_trade_offer",id=id)
+                elif changed_currency == "VND":
+                    changed_value = 10000 * change_value
+                    sql = Trade(changed_value=change_value,changed_value=changed_value,change_currency=change_currency,changed_currency=changed_currency,payment_method=changed_currency,done="Còn hạn")
+                    sql.save()
+                    sql = Trade.objects.filter(changed_value=change_value,changed_value=changed_value,change_currency=change_currency,changed_currency=changed_currency,payment_method=changed_currency,done="Còn hạn",user=bio).first()
+                    return redirect("read_trade_offer",id=id)
+                elif changed_currency == "USD":
+                    changed_value = 0.41 * change_value
+                    sql = Trade(changed_value=change_value,changed_value=changed_value,change_currency=change_currency,changed_currency=changed_currency,payment_method=changed_currency,done="Còn hạn")
+                    sql.save()
+                    sql = Trade.objects.filter(changed_value=change_value,changed_value=changed_value,change_currency=change_currency,changed_currency=changed_currency,payment_method=changed_currency,done="Còn hạn",user=bio).first()
+                    return redirect("read_trade_offer",id=id)
+            else:
+                return redirect("create_trade_offer_view",id=id)
     
 #payment_api
 def question_payment(request,id):
@@ -203,8 +288,8 @@ def question_payment(request,id):
                 teen_balanced = float(web3.toWei(contract.functions.balanceOf(bio.address).call(),'ether'))
                 if final == bio.wallet_passcode and teen_balanced >= question.price:
 
-                    os.environ["real_password"+bio] = bio.address_password
-                    real_password = os.getenv("real_password"+bio)
+                    os.environ["real_password_question"+bio.user.username] = bio.address_password
+                    real_password = os.getenv("real_password_document"+bio.user.username)
 
                     tran = contract.functions.transfer(question.user.address, web3.toWei(question.price, 'ether')).buildTransaction(
                     {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address), 'value': 0})
@@ -228,8 +313,8 @@ def document_payment(request,id):
                 teen_balanced = float(web3.toWei(contract.functions.balanceOf(bio.address).call(),'ether'))
                 if final == bio.wallet_passcode and teen_balanced >= document.price:
 
-                    os.environ["real_password"+bio] = bio.address_password
-                    real_password = os.getenv("real_password"+bio)
+                    os.environ["real_password_document"+bio.user.username] = bio.address_password
+                    real_password = os.getenv("real_password_document"+bio.user.username)
 
                     tran = contract.functions.transfer(document.user.address, web3.toWei(document.price, 'ether')).buildTransaction(
                     {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address), 'value': 0})
@@ -261,8 +346,8 @@ def gigs_payment(request,id):
                             sql = Learn(check_stu=check,cls_day=cls_day)
                             sql.save()
 
-                            os.environ["real_password"+bio] = bio.address_password
-                            real_password = os.getenv("real_password"+bio)
+                            os.environ["real_password_gigs"+bio.user.username] = bio.address_password
+                            real_password = os.getenv("real_password_gigs"+bio.user.username)
 
                             tran = contract.functions.transfer(gigs.user.address, web3.toWei(gigs.price, 'ether')).buildTransaction(
                             {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address), 'value': 0})
@@ -275,8 +360,8 @@ def gigs_payment(request,id):
                             sql = Learn(check_stu=check,cls_day=1)
                             sql.save()
 
-                            os.environ["real_password"+bio] = bio.address_password
-                            real_password = os.getenv("real_password"+bio)
+                            os.environ["real_password_gigs"+bio.user.username] = bio.address_password
+                            real_password = os.getenv("real_password_gigs"+bio.user.username)
 
                             tran = contract.functions.transfer(gigs.user.address, web3.toWei(gigs.price, 'ether')).buildTransaction(
                             {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address), 'value': 0})
@@ -288,6 +373,426 @@ def gigs_payment(request,id):
             else:
                 return redirect("retry_gig_payment",time=1)
             
+#trade_api
+def eth_to_teen(request,id):
+    if request.user.is_authenticated:
+        post = Trade.objects.filter(id=id).first()
+        if request.method == "POST" and post and post.change_currency.name == "ETH" and post.changed_currency.name == "Teen":
+            code = request.POST.get("passcode")
+            if code:
+                final = hashed(code)
+                if final != "ValueError: The passcode just contain only number from 0 to 9":
+                    bio = Bio.objects.filter(wallet_passcode=final,user=request.user).first()
+                    teen_balanced = float(web3.toWei(contract.functions.balanceOf(bio.address).call(),'ether'))
+                    eth_balanced = float(eth_balanced = float(web3.toWei(web3.eth.getBalance(post.user.address),'ether')))
+                    if teen_balanced >= post.changed_value and eth_balanced >= post.change_value:
+                        os.environ["real_password_teen"+bio.user.username] = bio.address_password
+                        real_password = os.getenv("real_password_teen"+bio.user.username)
+
+                        tran = contract.functions.transfer(post.user.address, web3.toWei(post.changed_price, 'ether')).buildTransaction(
+                        {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address), 'value': 0})
+                        signed_txn = web3.eth.account.signTransaction(tran, real_password)
+                        web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+
+                        os.environ["real_password_eth"+post.user.username] = post.user.address_password
+                        test2 = os.getenv("real_password_eth"+post.user.username)
+                        tran = {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(post.user.address),'to': bio.address, 'value': web3.toWei(post.change_value, 'ether')}
+                        signed_txn = web3.eth.account.signTransaction(tran, test2)
+                        web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+                        return redirect("eth_to_teen_invoice")
+                    else:
+                        return redirect("retry_eth_to_teen_trade",time=1)
+                else:
+                    return redirect("retry_eth_to_teen_trade",time=1)
+            else:
+                    return redirect("retry_eth_to_teen_trade",time=1)
+            
+def teen_to_eth(request,id):
+    if request.user.is_authenticated:
+        post = Trade.objects.filter(id=id).first()
+        if request.method == "POST" and post and post.change_currency.name == "Teen" and post.changed_currency.name == "ETH":
+            code = request.POST.get("passcode")
+            if code:
+                final = hashed(code)
+                if final != "ValueError: The passcode just contain only number from 0 to 9":
+                    bio = Bio.objects.filter(wallet_passcode=final,user=request.user).first()
+                    teen_balanced = float(web3.toWei(contract.functions.balanceOf(bio.address).call(),'ether'))
+                    eth_balanced = float(eth_balanced = float(web3.toWei(web3.eth.getBalance(post.user.address),'ether')))
+                    if teen_balanced >= post.changed_value and eth_balanced >= post.change_value:
+                        post.done = "Đã Hoàn Thành Giao Dịch"
+                        post.save()
+
+                        os.environ["real_password_teen"+bio.user.username] = bio.address_password
+                        real_password = os.getenv("real_password_teen"+bio.user.username)
+
+                        tran = contract.functions.transfer(bio.address, web3.toWei(post.changed_price, 'ether')).buildTransaction(
+                        {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address), 'value': 0})
+                        signed_txn = web3.eth.account.signTransaction(tran, real_password)
+                        web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+
+                        os.environ["real_password_eth"+post.user.username] = post.user.address_password
+                        test2 = os.getenv("real_password_eth"+post.user.username)
+                        tran = {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(post.user.address),'to': bio.address, 'value': web3.toWei(post.change_value, 'ether')}
+                        signed_txn = web3.eth.account.signTransaction(tran, test2)
+                        web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+                        return redirect("eth_to_teen_invoice")
+                    else:
+                        return redirect("retry_eth_to_teen_trade",time=1)
+                else:
+                    return redirect("retry_eth_to_teen_trade",time=1)
+            else:
+                    return redirect("retry_eth_to_teen_trade",time=1)
+            
+#transfer_api
+def teen_transfer(request,id):
+    if request.user.is_authenticated:
+        post = Bio.objects.filter(id=id).first()
+        if request.method == "POST" and post:
+            code = request.POST.get("passcode")
+            value = request.POST.get("value")
+            if code and value:
+                final = hashed(code)
+                if final != "ValueError: The passcode just contain only number from 0 to 9":
+                    bio = Bio.objects.filter(wallet_passcode=final,user=request.user).first()
+                    teen_balanced = float(web3.toWei(contract.functions.balanceOf(bio.address).call(),'ether'))
+                    eth_balanced = float(eth_balanced = float(web3.toWei(web3.eth.getBalance(post.address),'ether')))
+                    if teen_balanced >= post.changed_value and eth_balanced >= post.change_value:
+                        post.done = "Đã Hoàn Thành Giao Dịch"
+                        post.save()
+
+                        os.environ["real_password_teen_transfer"+bio.user.username] = bio.address_password
+                        real_password = os.getenv("real_password_teen_transfer"+bio.user.username)
+
+                        tran = contract.functions.transfer(post.user.address, web3.toWei(value, 'ether')).buildTransaction(
+                        {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address), 'value': 0})
+                        signed_txn = web3.eth.account.signTransaction(tran, real_password)
+                        web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+                        return redirect("teen_invoice")
+                    else:
+                        return redirect("retry_teen_transfer",time=1)
+                else:
+                    return redirect("retry_teen_transfer",time=1)
+            else:
+                    return redirect("retry_teen_transfer",time=1)
+            
+def teen_transfer(request,id):
+    if request.user.is_authenticated:
+        post = Bio.objects.filter(id=id).first()
+        if request.method == "POST" and post:
+            code = request.POST.get("passcode")
+            value = request.POST.get("value")
+            if code and value:
+                final = hashed(code)
+                if final != "ValueError: The passcode just contain only number from 0 to 9":
+                    bio = Bio.objects.filter(wallet_passcode=final,user=request.user).first()
+                    teen_balanced = float(web3.toWei(contract.functions.balanceOf(bio.address).call(),'ether'))
+                    eth_balanced = float(eth_balanced = float(web3.toWei(web3.eth.getBalance(post.address),'ether')))
+                    if teen_balanced >= post.changed_value and eth_balanced >= post.change_value:
+                        os.environ["real_password_eth"+post.user.username] = post.user.address_password
+                        test2 = os.getenv("real_password_eth"+post.user.username)
+                        tran = {'chainId': 11155111, 'gas': 3000000, 'nonce': web3.eth.getTransactionCount(bio.address),'to': post.address, 'value': web3.toWei(value, 'ether')}
+                        signed_txn = web3.eth.account.signTransaction(tran, test2)
+                        web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+                        return redirect("eth_invoice")
+                    else:
+                        return redirect("retry_eth_transfer",time=1)
+                else:
+                    return redirect("retry_eth_transfer",time=1)
+            else:
+                    return redirect("retry_eth_transfer",time=1)
+            
+#like_api
+def like_post(request,id):
+    if request.user.is_authenticated:
+        post = Post.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.like:
+            post.like.add(bio)
+            goal = "/posts/#"+str(id)+"/"
+            return redirect(goal)
+        else:
+            post.like.remove(bio)
+            goal = "/posts/#"+str(id)+"/"
+            return redirect(goal)
+    else:
+        return redirect("a_login")
+    
+def like_document(request,id):
+    if request.user.is_authenticated:
+        post = Document.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.like:
+            post.like.add(bio)
+            return redirect("read_document",id=id)
+        else:
+            post.like.remove(bio)
+            return redirect("read_document",id=id)
+    else:
+        return redirect("a_login")
+    
+def like_document(request,id):
+    if request.user.is_authenticated:
+        post = Document.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.like:
+            post.like.add(bio)
+            return redirect("read_document",id=id)
+        else:
+            post.like.remove(bio)
+            return redirect("read_document",id=id)
+    else:
+        return redirect("a_login")
+
+def like_gig(request,id):
+    if request.user.is_authenticated:
+        post = Gigs.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.like:
+            post.like.add(bio)
+            return redirect("read_gig",id=id)
+        else:
+            post.like.remove(bio)
+            return redirect("read_gig",id=id)
+    else:
+        return redirect("a_login")
+    
+def like_question(request,id):
+    if request.user.is_authenticated:
+        post = Question.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.like:
+            post.like.add(bio)
+            return redirect("read_question",id=id)
+        else:
+            post.like.remove(bio)
+            return redirect("read_question",id=id)
+    else:
+        return redirect("a_login")
+
+def like_answer(request,id):
+    if request.user.is_authenticated:
+        post = Answer.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.like:
+            post.like.add(bio)
+            return redirect("read_question",id=post.question.id)
+        else:
+            post.like.remove(bio)
+            return redirect("read_question",id=post.question.id)
+    else:
+        return redirect("a_login")
+    
+#dislike_api
+def dislike_post(request,id):
+    if request.user.is_authenticated:
+        post = Post.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.dislike:
+            post.dislike.add(bio)
+            goal = "/posts/#"+str(id)+"/"
+            return redirect(goal)
+        else:
+            post.dislike.remove(bio)
+            goal = "/posts/#"+str(id)+"/"
+            return redirect(goal)
+    else:
+        return redirect("a_login")
+    
+def dislike_document(request,id):
+    if request.user.is_authenticated:
+        post = Document.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.dislike:
+            post.dislike.add(bio)
+            return redirect("read_document",id=id)
+        else:
+            post.dislike.remove(bio)
+            return redirect("read_document",id=id)
+    else:
+        return redirect("a_login")
+    
+def dislike_document(request,id):
+    if request.user.is_authenticated:
+        post = Document.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.dislike:
+            post.dislike.add(bio)
+            return redirect("read_document",id=id)
+        else:
+            post.dislike.remove(bio)
+            return redirect("read_document",id=id)
+    else:
+        return redirect("a_login")
+
+def dislike_gig(request,id):
+    if request.user.is_authenticated:
+        post = Gigs.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.dislike:
+            post.dislike.add(bio)
+            return redirect("read_gig",id=id)
+        else:
+            post.dislike.remove(bio)
+            return redirect("read_gig",id=id)
+    else:
+        return redirect("a_login")
+    
+def dislike_question(request,id):
+    if request.user.is_authenticated:
+        post = Question.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.dislike:
+            post.dislike.add(bio)
+            return redirect("read_question",id=id)
+        else:
+            post.dislike.remove(bio)
+            return redirect("read_question",id=id)
+    else:
+        return redirect("a_login")
+
+def dislike_answer(request,id):
+    if request.user.is_authenticated:
+        post = Answer.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if bio not in post.dislike:
+            post.dislike.add(bio)
+            return redirect("read_question",id=post.question.id)
+        else:
+            post.dislike.remove(bio)
+            return redirect("read_question",id=post.question.id)
+    else:
+        return redirect("a_login")
+    
+#comment_api
+def comment_post(request,id):
+    if request.user.is_authenticated:
+        post = Post.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if post and bio:
+            if request.method =="POST":
+                content = request.POST.get("content")
+
+                sql = Comment_Post(post=post,user=bio,content=content)
+                sql.save()
+                sql = Comment_Post.objects.filter(post=post,user=bio,content=content).first()
+                goal = "/post/"+str(id)+"/#"+str(sql.id)+"/"
+                return redirect(goal)
+        else:
+            return redirect("read_post",id=id)
+    else:
+        return redirect("a_login")
+    
+def comment_gig(request,id):
+    if request.user.is_authenticated:
+        post = Gigs.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if post and bio:
+            if request.method =="POST":
+                content = request.POST.get("content")
+
+                sql = Comment_Gigs(post=post,user=bio,content=content)
+                sql.save()
+                sql = Comment_Gigs.objects.filter(post=post,user=bio,content=content).first()
+                goal = "/gig/"+str(id)+"/#"+str(sql.id)+"/"
+                return redirect(goal)
+        else:
+            return redirect("read_gig",id=id)
+    else:
+        return redirect("a_login")
+    
+def comment_document(request,id):
+    if request.user.is_authenticated:
+        post = Document.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if post and bio:
+            if request.method =="POST":
+                content = request.POST.get("content")
+
+                sql = Comment_Document(post=post,user=bio,content=content)
+                sql.save()
+                sql = Comment_Document.objects.filter(post=post,user=bio,content=content).first()
+                goal = "/document/"+str(id)+"/#"+str(sql.id)+"/"
+                return redirect(goal)
+        else:
+            return redirect("read_gig",id=id)
+    else:
+        return redirect("a_login")
+
+def answer(request,id):
+    if request.user.is_authenticated:
+        post = Question.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if post and bio:
+            if request.method =="POST":
+                content = request.POST.get("content")
+                file = request.FILE.get("file")
+                image = request.FILE.get("image")
+
+                sql = Answer(question=post,user=bio,content=content,image=image,file=file)
+                sql.save()
+                sql = Answer.objects.filter(question=post,user=bio,content=content,image=image,file=file,choosen=0).first()
+                goal = "/question/"+str(id)+"/#"+str(sql.id)+"/"
+                return redirect(goal)
+        else:
+            return redirect("read_question",id=id)
+    else:
+        return redirect("a_login")   
+
+#reply_comment_api
+def reply_comment_post(request,id):
+    if request.user.is_authenticated:
+        post = Comment_Post.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if post and bio:
+            if request.method =="POST":
+                content = request.POST.get("content")
+
+                sql = Comment_Post(post=post.post,user=bio,content=content,reply=post)
+                sql.save()
+                sql = Comment_Post.objects.filter(post=post.post,user=bio,content=content,reply=post).first()
+                goal = "/post/"+str(id)+"/#"+str(sql.id)+"/"
+                return redirect(goal)
+        else:
+            return redirect("read_post",id=id)
+    else:
+        return redirect("a_login")
+    
+def comment_gig(request,id):
+    if request.user.is_authenticated:
+        post = Comment_Gigs.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if post and bio:
+            if request.method =="POST":
+                content = request.POST.get("content")
+
+                sql = Comment_Gigs(post=post.post,user=bio,content=content,reply=post)
+                sql.save()
+                sql = Comment_Gigs.objects.filter(post=post.post,user=bio,content=content,reply=post).first()
+                goal = "/gig/"+str(id)+"/#"+str(sql.id)+"/"
+                return redirect(goal)
+        else:
+            return redirect("read_gig",id=id)
+    else:
+        return redirect("a_login")
+    
+def comment_document(request,id):
+    if request.user.is_authenticated:
+        post = Comment_Document.objects.filter(id=id).first()
+        bio = Bio.objects.filter(user=request.user).first()
+        if post and bio:
+            if request.method =="POST":
+                content = request.POST.get("content")
+
+                sql = Comment_Document(post=post.post,user=bio,content=content,reply=post)
+                sql.save()
+                sql = Comment_Document.objects.filter(post=post.post,user=bio,content=content,reply=post).first()
+                goal = "/document/"+str(id)+"/#"+str(sql.id)+"/"
+                return redirect(goal)
+        else:
+            return redirect("read_gig",id=id)
+    else:
+        return redirect("a_login")
+
 #read_api
 """
     Lưu Ý: 
