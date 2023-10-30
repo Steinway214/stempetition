@@ -43,7 +43,7 @@ class Gigs(models.Model):
     like = models.ManyToManyField(Bio)
     dislike = models.ManyToManyField(Bio)
 
-class Comment_Post(models.Model):
+class Comment_Gigs(models.Model):
     content = models.TextField()
     user = models.ForeignKey(
        Bio, related_name='comment_gigs_user', on_delete=models.CASCADE, null=True)
@@ -83,8 +83,8 @@ class Answer(models.Model):
     question = models.ForeignKey(Question,on_delete=models.CASCADE,related_name="ques_select")
     user = models.ForeignKey(Bio,on_delete=models.CASCADE,related_name="question_user_answer")
     reply = models.ForeignKey('self',on_delete=models.CASCADE,related_name="answer_reply")
-    upvote = models.ManyToManyField(Bio)
-    downvote = models.ManyToManyField(Bio)
+    like = models.ManyToManyField(Bio)
+    dislike = models.ManyToManyField(Bio)
     choosen = models.IntegerField()
     datetime = models.DateTimeField(auto_now_add=True)
 
@@ -99,6 +99,15 @@ class Document(models.Model):
     like = models.ManyToManyField(Bio)
     dislike = models.ManyToManyField(Bio)
     datetime = models.DateTimeField(auto_now_add=True)
+
+class Comment_Document(models.Model):
+    content = models.TextField()
+    user = models.ForeignKey(
+       Bio, related_name='comment_document_user', on_delete=models.CASCADE, null=True)
+    post = models.ForeignKey(
+        Document, related_name='comment_document', on_delete=models.CASCADE, null=True)
+    reply = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True, related_name="document_reply")
 
 class Post(models.Model):
     content = models.CharField(max_length=1000)
@@ -121,9 +130,13 @@ class payment_method(models.Model):
 
     
 class Trade(models.Model):
-    value = models.FloatField()
-    payment_method = models.ForeignKey(payment_method)
+    change_value = models.FloatField()
+    changed_value = models.FloatField()
+    change_currency = models.ForeignKey(payment_method,on_delete=models.CASCADE,related_name="change_currency")
+    changed_currency = models.ForeignKey(payment_method,on_delete=models.CASCADE,related_name="currency")
+    payment_method = models.ForeignKey(payment_method,on_delete=models.CASCADE,related_name="payment_method")
     done = models.CharField(max_length=10)
+    user = models.ForeignKey(Bio,on_delete=models.CASCADE,related_name="trade_user")
     datetime = models.DateTimeField(auto_now_add=True)
 
 
