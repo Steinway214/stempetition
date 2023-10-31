@@ -192,9 +192,11 @@ def document_create(request):
             file = request.FILE.get("file")
             image = request.FILE.get("image")
             grade = request.POST.get("grade")
+            price = request.POST.get("price")
             edu_rank = request.POST.get("education_rank")
+            subject = request.POST.get("subject")
 
-            sql = Document(title=title,description=description,file=file,image=image,grade=grade,edu_rank=edu_rank,user=user)
+            sql = Document(title=title,description=description,file=file,image=image,grade=grade,edu_rank=edu_rank,user=user,price=price,subject=subject)
             sql.save()
             return redirect("document_view")
     else:
@@ -692,6 +694,10 @@ def comment_gig(request,id):
 
                 sql = Comment_Gigs(post=post,user=bio,content=content)
                 sql.save()
+
+                post.comment_counter += 1
+                post.save()
+
                 sql = Comment_Gigs.objects.filter(post=post,user=bio,content=content).first()
                 goal = "/gig/"+str(id)+"/#"+str(sql.id)+"/"
                 return redirect(goal)
@@ -710,6 +716,10 @@ def comment_document(request,id):
 
                 sql = Comment_Document(post=post,user=bio,content=content)
                 sql.save()
+                
+                post.comment_counter += 1
+                post.save()
+
                 sql = Comment_Document.objects.filter(post=post,user=bio,content=content).first()
                 goal = "/document/"+str(id)+"/#"+str(sql.id)+"/"
                 return redirect(goal)
@@ -730,6 +740,10 @@ def answer(request,id):
 
                 sql = Answer(question=post,user=bio,content=content,image=image,file=file)
                 sql.save()
+                
+                post.comment_counter += 1
+                post.save()
+
                 sql = Answer.objects.filter(question=post,user=bio,content=content,image=image,file=file,choosen=0).first()
                 goal = "/question/"+str(id)+"/#"+str(sql.id)+"/"
                 return redirect(goal)
@@ -749,6 +763,10 @@ def reply_comment_post(request,id):
 
                 sql = Comment_Post(post=post.post,user=bio,content=content,reply=post)
                 sql.save()
+                
+                post.comment_counter += 1
+                post.save()
+
                 sql = Comment_Post.objects.filter(post=post.post,user=bio,content=content,reply=post).first()
                 goal = "/post/"+str(id)+"/#"+str(sql.id)+"/"
                 return redirect(goal)
@@ -757,7 +775,7 @@ def reply_comment_post(request,id):
     else:
         return redirect("a_login")
     
-def comment_gig(request,id):
+def reply_comment_gig(request,id):
     if request.user.is_authenticated:
         post = Comment_Gigs.objects.filter(id=id).first()
         bio = Bio.objects.filter(user=request.user).first()
@@ -767,6 +785,10 @@ def comment_gig(request,id):
 
                 sql = Comment_Gigs(post=post.post,user=bio,content=content,reply=post)
                 sql.save()
+                
+                post.comment_counter += 1
+                post.save()
+
                 sql = Comment_Gigs.objects.filter(post=post.post,user=bio,content=content,reply=post).first()
                 goal = "/gig/"+str(id)+"/#"+str(sql.id)+"/"
                 return redirect(goal)
@@ -775,7 +797,7 @@ def comment_gig(request,id):
     else:
         return redirect("a_login")
     
-def comment_document(request,id):
+def reply_comment_document(request,id):
     if request.user.is_authenticated:
         post = Comment_Document.objects.filter(id=id).first()
         bio = Bio.objects.filter(user=request.user).first()
@@ -785,6 +807,10 @@ def comment_document(request,id):
 
                 sql = Comment_Document(post=post.post,user=bio,content=content,reply=post)
                 sql.save()
+                
+                post.comment_counter += 1
+                post.save()
+
                 sql = Comment_Document.objects.filter(post=post.post,user=bio,content=content,reply=post).first()
                 goal = "/document/"+str(id)+"/#"+str(sql.id)+"/"
                 return redirect(goal)
@@ -792,6 +818,186 @@ def comment_document(request,id):
             return redirect("read_gig",id=id)
     else:
         return redirect("a_login")
+    
+#search_api
+def search_post(request):
+    if request.user.is_authenticated:
+        if request.method == "POST":
+            q = request.POST.get("search")
+
+            return redirect("searched_post",q=q)
+    else:
+        return redirect("a_login")
+    
+def search_document(request):
+    if request.user.is_authenticated:
+        if request.method == "POST":
+            q = request.POST.get("search")
+
+            return redirect("searched_document",q=q)
+    else:
+        return redirect("a_login")
+    
+def search_gig(request):
+    if request.user.is_authenticated:
+        if request.method == "POST":
+            q = request.POST.get("search")
+
+            return redirect("searched_gig",q=q)
+    else:
+        return redirect("a_login")
+
+def search_question(request):
+    if request.user.is_authenticated:
+        if request.method == "POST":
+            q = request.POST.get("search")
+
+            return redirect("searched_question",q=q)
+    else:
+        return redirect("a_login")
+    
+#update_api
+def update_gig(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Gigs.objects.filter(id=id).first()
+        subject = Subject.objects.filter(edu_rank=post.education_rank).all()
+        context = {'post':post, "subjects":subject}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("title")
+            post.description = request.POST.get("description")
+            post.result = request.POST.get("result")
+            post.image = request.FILE.get("image")
+            post.grade = request.POST.get("grade")
+            post.price = request.POST.get("price")
+            post.subject = request.POST.get("subject")
+            post.book_include = request.POST.get("book_include")
+            post.type_learn = request.POST.get("type_learn")
+
+            post.save()
+            return redirect("read_gig",id=id)
+    else:
+        return redirect("a_login")
+    return render("gigs/update.html", context)
+
+def update_document(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Document.objects.filter(id=id).first()
+        subject = Subject.objects.filter(edu_rank=post.education_rank).all()
+        context = {'post':post, "subjects":subject}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("title")
+            post.description = request.POST.get("description")
+            post.file = request.FILE.get("file")
+            post.image = request.FILE.get("image")
+            post.grade = request.POST.get("grade")
+            post.price = request.POST.get("price")
+            post.subject = request.POST.get("subject")
+
+
+            post.save()
+            return redirect("read_document",id=id)
+    else:
+        return redirect("a_login")
+    return render("document/update.html", context)
+
+def update_question(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Question.objects.filter(id=id).first()
+        subject = Subject.objects.filter(edu_rank=post.education_rank).all()
+        context = {'post':post, "subjects":subject}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("title")
+            post.description = request.POST.get("description")
+            post.file = request.FILE.get("file")
+            post.image = request.FILE.get("image")
+            post.grade = request.POST.get("grade")
+            post.price = request.POST.get("price")
+            post.subject = request.POST.get("subject")
+
+            post.save()
+            return redirect("read_question",id=id)
+    else:
+        return redirect("a_login")
+    return render("question/update.html", context)
+
+def update_answer(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Answer.objects.filter(id=id).first()
+        context = {'post':post}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("content")
+            post.file = request.FILE.get("file")
+            post.image = request.FILE.get("image")
+
+            post.save()
+            return redirect("read_question",id=post.question.id)
+    else:
+        return redirect("a_login")
+    return render("question/answer/update.html", context)
+
+def update_post(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Post.objects.filter(id=id).first()
+        context = {'post':post}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("content")
+
+            post.save()
+            goal = "/posts/#"+str(id)
+            return redirect(goal)
+    else:
+        return redirect("a_login")
+    return render("post/update.html", context)
+
+def update_comment_post(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Comment_Post.objects.filter(id=id).first()
+        context = {'post':post}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("content")
+
+            post.save()
+            goal = "/posts/#"+str(post.post.id)
+            return redirect(goal)
+    else:
+        return redirect("a_login")
+    return render("post/comment/update.html", context)
+
+def update_comment_gigs(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Comment_Gigs.objects.filter(id=id).first()
+        context = {'post':post}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("content")
+
+            post.save()
+            goal = "/gig/"+str(post.post.id)+"/#"+str(id)
+            return redirect(goal)
+    else:
+        return redirect("a_login")
+    return render("gigs/comment/update.html", context)
+
+def update_comment_document(request,id):
+    if request.user.is_authenticated:
+        bio = Bio.objects.filter(user=request.user).first()
+        post = Comment_Document.objects.filter(id=id).first()
+        context = {'post':post}
+        if request.method == "POST" and post and bio:
+            post.title = request.POST.get("content")
+
+            post.save()
+            goal = "/document/"+str(post.post.id)+"/#"+str(id)
+            return redirect(goal)
+    else:
+        return redirect("a_login")
+    return render("document/comment/update.html", context)
 
 #read_api
 """
