@@ -40,8 +40,9 @@ class Gigs(models.Model):
     user = models.ForeignKey(Bio, on_delete=models.CASCADE, related_name="gigs_auth")
     book_include = models.CharField(max_length=1000)
     type_learn = models.CharField(max_length=1000)
-    like = models.ManyToManyField(Bio)
-    dislike = models.ManyToManyField(Bio)
+    like = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="gig_like")
+    dislike = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="gig_like")
+    comment_counter = models.IntegerField()
 
 class Comment_Gigs(models.Model):
     content = models.TextField()
@@ -50,7 +51,7 @@ class Comment_Gigs(models.Model):
     post = models.ForeignKey(
         Gigs, related_name='comment_gigs', on_delete=models.CASCADE, null=True)
     reply = models.ForeignKey(
-        'self', on_delete=models.CASCADE, null=True, blank=True, related_name="post_reply")
+        'self', on_delete=models.CASCADE, null=True, blank=True, related_name="gigs_reply")
     
 class join_cls(models.Model):
     gig = models.ForeignKey(Gigs,on_delete=models.CASCADE,related_name="joined_gig")
@@ -72,9 +73,10 @@ class Question(models.Model):
     education_rank = models.ForeignKey(Education_rank,on_delete=models.CASCADE,related_name="Education_rank_question")
     grade = models.IntegerField()
     price = models.FloatField()
-    like = models.ManyToManyField(Bio)
-    dislike = models.ManyToManyField(Bio)
+    like = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="question_like")
+    dislike = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="question_dislike")
     datetime = models.DateTimeField(auto_now_add=True)
+    comment_counter = models.IntegerField()
 
 class Answer(models.Model):
     content = models.TextField()
@@ -83,8 +85,8 @@ class Answer(models.Model):
     question = models.ForeignKey(Question,on_delete=models.CASCADE,related_name="ques_select")
     user = models.ForeignKey(Bio,on_delete=models.CASCADE,related_name="question_user_answer")
     reply = models.ForeignKey('self',on_delete=models.CASCADE,related_name="answer_reply")
-    like = models.ManyToManyField(Bio)
-    dislike = models.ManyToManyField(Bio)
+    like = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="answer_like")
+    dislike = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="answer_dislike")
     choosen = models.IntegerField()
     datetime = models.DateTimeField(auto_now_add=True)
 
@@ -92,13 +94,16 @@ class Document(models.Model):
     title = models.CharField(max_length=1000)
     description = models.TextField()
     grade = models.IntegerField()
+    price = models.FloatField()
     user = models.ForeignKey(Bio,on_delete=models.CASCADE,related_name="Document_auth")
     edu_rank = models.ForeignKey(Education_rank,on_delete=models.CASCADE,related_name="doc_edu_rank")
+    subject = models.ForeignKey(Subject,on_delete=models.CASCADE,related_name="document_subject")
     file = models.FileField(upload_to="files/",null=True,blank=True)
     image = models.ImageField(upload_to="images/",null=True,blank=True)
-    like = models.ManyToManyField(Bio)
-    dislike = models.ManyToManyField(Bio)
+    like = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="document_like")
+    dislike = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="document_dislike")
     datetime = models.DateTimeField(auto_now_add=True)
+    comment_counter = models.IntegerField()
 
 class Comment_Document(models.Model):
     content = models.TextField()
@@ -108,13 +113,16 @@ class Comment_Document(models.Model):
         Document, related_name='comment_document', on_delete=models.CASCADE, null=True)
     reply = models.ForeignKey(
         'self', on_delete=models.CASCADE, null=True, blank=True, related_name="document_reply")
+    like = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="comment_document_like")
+    dislike = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="comment_document_dislike")
 
 class Post(models.Model):
     content = models.CharField(max_length=1000)
-    like = models.ManyToManyField(Bio)
+    like = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="post_like")
     user = models.ForeignKey(Bio,on_delete=models.CASCADE,related_name="post_auth")
-    dislike = models.ManyToManyField(Bio)
+    dislike = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="post_dislike")
     datetime = models.DateTimeField(auto_now_add=True)
+    comment_counter = models.IntegerField()
 
 class Comment_Post(models.Model):
     content = models.TextField()
@@ -124,6 +132,8 @@ class Comment_Post(models.Model):
         Post, related_name='comment_post', on_delete=models.CASCADE, null=True)
     reply = models.ForeignKey(
         'self', on_delete=models.CASCADE, null=True, blank=True, related_name="post_reply")
+    like = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="comment_post_like")
+    dislike = models.ManyToManyField(Bio,null=True,blank=True,on_delete=models.CASCADE,related_name="comment_post_dislike")
 
 class payment_method(models.Model):
     name = models.CharField()
