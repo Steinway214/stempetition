@@ -1023,25 +1023,114 @@ def update_comment_document(request,id):
 """
 
 #delete_api
-"""
-    Lưu Ý: 
-        1. <name> = tên của tính năng (gigs: profile gia sư, post: bài đăng, ...)
-        2. Có gì chưa rõ inbox hỏi lại em để đảm bảo khả năng hoạt động và tiến độ của dự án
-        3. Lấy file gốc ở branch main trên github
-        4. Khi up lại file thì up ở branch riêng (có name theo tên người) để tránh trường hợp nhiều bản đc đẩy lên cùng lúc
-        5. Đối với xóa gigs, Post, Question, Document thì ko cần viết lệnh xóa phần comment & answer (em đã gán on_delete ở phần model.py nên nó sẽ tự xóa nếu nhx cái kia bị xóa)
-        6. Đối với xóa comment và answer thì làm như bình thường
-        7. Chưa chạy thử dự án để phòng trường hợp lỗi
-        8. Edit trực tiếp tại https://github.dev/Codedr-edu/stempetition/tree/Anh-Huy/
-    Cách Làm:
-        B1. Tạo def delete_<name>(request, id)
-        B2. Tìm dòng có id = id đã khai báo trên ở CSDL và thêm delete
-        B3. redirect về trang list_view của tính năng đó (tên ở mục list_view)
-    Tham Khảo:
-        1. Các API khác của dự án (Tổng Thể)
-        2. https://docs.djangoproject.com/en/4.2/topics/db/queries/ (B2.1)
-        3. https://www.w3schools.com/django/django_delete_data.php (B2.2)
-        4. https://docs.djangoproject.com/en/4.2/topics/http/shortcuts/#redirect (B3)
-        5. https://www.w3schools.com/django/index.php (Tổng Hợp)
-        6. https://github.com/Codedr-edu/alclub (Dự án khác chỉ mang tính chất tham khảo thêm)
-"""
+def delete_Education_rank(request, id):
+    if request.user.is_authenticated:
+        education_rank = education_rank.objects.filter(id=id).first()
+        education_rank.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_Bio(request, id):
+    if request.user.is_authenticated:
+        bio = bio.objects.filter(id=id).first()
+        bio.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_Subject(request, id):
+    if request.user.is_authenticated:
+        subject = subject.objects.filter(id=id).first()
+        subject.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_Gigs(request, id):
+    if request.user.is_authenticated:
+        gigs = gigs.objects.filter(id=id).first()
+        gigs.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+    
+def delete_Comment_Gigs(request, id):
+    if request.user.is_authenticated:
+        comment= comment_Gigs.objects.filter(id=id).first()
+        comment.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+    
+def delete_join_cls(request, id):
+    if request.user.is_authenticated:
+        join_cls = join_cls.objects.filter(id=id).first()
+        join_cls.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+    
+def delete_Learn(request, id):
+    if request.user.is_authenticated:
+        learn = learn.objects.filter(id=id).first()
+        learn.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_Question(request, id):
+    if request.user.is_authenticated:
+        question = question.objects.filter(id=id).first()
+        question.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+    
+def delete_Answer(request, id):
+    if request.user.is_authenticated:
+        answer = answer.objects.filter(id=id).first()
+        answer.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_Document(request, id):
+    if request.user.is_authenticated:
+        document = document.objects.filter(id=id).first()
+        document.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_Post(request, id):
+    if request.user.is_authenticated:
+        post = post.objects.filter(id=id).first()
+        post.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_Comment_Post(request, id):
+    if request.user.is_authenticated:
+        comment = comment_Post.objects.filter(id=id).first()
+        comment.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def delete_payment_method(request, id):
+    if request.user.is_authenticated:
+        payment_method = payment_method.objects.filter(id=id).first()
+        payment_method.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
+
+def  delete_Trade(request, id):
+    if request.user.is_authenticated:
+        trade = trade.objects.filter(id=id).first()
+        trade.delete()
+        return redirect("home")
+    else:
+        return redirect("a_login")
