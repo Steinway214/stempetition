@@ -1000,6 +1000,32 @@ def update_comment_document(request,id):
     return render("document/comment/update.html", context)
 
 #read_api
+def Gigs_view(request, id):
+    if request.user.is_authenticated:
+        Gigs = Gigs.objects.filter(id=id).first()
+        noti = Gigs.objects.filter(user=request.user).all()
+        context = {'post': Gigs, "notis": noti}
+    else:
+        return redirect('a_login')
+    return render(request, 'Gigs/Gigs_view.html', context)
+
+def Question_view(request, id):
+    if request.user.is_authenticated:
+        Question = Question.objects.filter(id=id).first()
+        noti = Question.objects.filter(user=request.user).all()
+        context = {'post': Question, "notis": noti}
+    else:
+        return redirect('a_login')
+    return render(request, 'Question/Question_view.html', context)
+
+def Document_view(request, id):
+    if request.user.is_authenticated:
+        Document = Document.objects.filter(id=id).first()
+        noti = Document.objects.filter(user=request.user).all()
+        context = {'post': Document, "notis": noti}
+    else:
+        return redirect('a_login')
+    return render(request, 'Document/Document_view.html', context)
 """
     Lưu Ý: 
         1. <name> = tên của tính năng (gigs: profile gia sư, post: bài đăng, ...)
